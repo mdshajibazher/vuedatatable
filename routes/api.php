@@ -20,3 +20,4 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 
 //In Routeserviceprvider i added route prefix '/api'
 Route::apiResource('customers', 'CustomerController');
+Route::get('search/customers/{field}/{query}', 'customerController@search');

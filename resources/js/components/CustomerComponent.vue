@@ -53,7 +53,7 @@
                                 <td scope="row">{{customer.phone}}</td>
                                 <td scope="row">{{customer.total}}</td>
                                 <td class="text-center">
-                                  <button type="submit" class="btn btn-info btn-sm">View</button> | <button type="submit" class="btn btn-warning btn-sm">Edit</button> | <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                  <button type="submit" class="btn btn-info btn-sm">View</button> | <button type="submit" @click="edit(customer)" class="btn btn-warning btn-sm">Edit</button> | <button type="submit" @click="destroy(customer)" class="btn btn-danger btn-sm">Delete</button>
                                 </td>
 
                               </tr>
@@ -91,13 +91,13 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="customerModalLongTitle">Add New Customer</h5>
+        <h5 class="modal-title" id="customerModalLongTitle"> {{editMode ? 'edit' : 'Add New'}} Customer</h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
-       <form @submit.prevent="store" @keydown="form.onKeydown($event)">
+       <form @submit.prevent="editMode ? update() : store() " @keydown="form.onKeydown($event)">
       <div class="modal-body">
       <alert-error :form="form"></alert-error>
     <div class="form-group">
@@ -162,6 +162,7 @@
 
         data(){
           return {
+            editMode: false,
             query: '',
             queryField: 'name',
             customers: [],
@@ -229,6 +230,7 @@
             this.$snotify.success('data successfully refreshed', 'success')
           },
           create(){
+            this.editMode = false;
             this.form.reset();
             this.form.clear();
             $('#customerModalLong').modal('show')
@@ -253,7 +255,79 @@
               this.$Progress.fail()
             })
 
+          },
+          edit(customer){
+            this.editMode = true
+            this.form.reset()
+            this.form.clear()
+            this.form.fill(customer)
+            $('#customerModalLong').modal('show')
+          },
+          update(){
+            this.$Progress.start()
+            this.form.busy = true
+            this.form.put('api/customers/'+this.form.id)
+              .then(response => {
+                this.getData()
+                 $('#customerModalLong').modal('hide');
+                 if(this.form.successful){
+                   this.$Progress.finish()
+                   this.$snotify.success('Customer Successfully Updated', 'success')
+                 }else{
+                   this.$Progress.fail()
+                   this.$snotify.error('Something Went Wrong', 'Error')
+                 }
+              })
+              .catch(e => {
+              console.log(e)
+              this.$Progress.fail()
+            })
+          },
+          destroy(customer){
+                  this.$snotify.clear();
+      this.$snotify.confirm(
+        "You will not be able to recover this data!",
+        "Are you sure?",
+        {
+          showProgressBar: false,
+          closeOnClick: false,
+          pauseOnHover: true,
+          buttons: [
+            {
+              text: "Yes",
+              action: toast => {
+                this.$snotify.remove(toast.id);
+                this.$Progress.start();
+                axios
+                  .delete('api/customers/'+customer.id)
+                  .then(response => {
+                    this.getData();
+                    this.$Progress.finish();
+                    this.$snotify.success(
+                      "Customer Successfully Deleted",
+                      "Success"
+                    );
+                  })
+                  .catch(e => {
+                    this.$Progress.fail();
+                    console.log(e);
+                  });
+              },
+              bold: true
+            },
+            {
+              text: "No",
+              action: toast => {
+                this.$snotify.remove(toast.id);
+              },
+              bold: true
+            }
+          ]
+        }
+      );
           }
+
+
         }
 
     }
